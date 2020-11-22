@@ -1,13 +1,17 @@
 const Discord = require('discord.js');
-const Hepburn = require('hepburn');
-const renderFurigana = require('render-furigana');
 const fs = require('fs');
-const kanjiFont = '40px IPAMincho';
-const furiganaFont = '20px IPAMincho';
-//const Kuroshiro = require('kuroshiro');
-//const KuromojiAnalyzer = require('kuroshiro-analyzer-kuromoji');
+const renderFurigana = require('render-furigana');
+const kanjiFont = '40px Yu Gothic UI';
+const furiganaFont = '20px Yu Gothic UI';
+const Kuroshiro = require('kuroshiro');
 const JishoApi = require('unofficial-jisho-api');
 const jisho = new JishoApi();
+
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}   
 
 module.exports = {
     name: 'jisho',
@@ -19,35 +23,38 @@ module.exports = {
         }
 
         jisho.searchForPhrase(args.join(' ')).then(result => {
+            console.log(result);
+
+            if (result.data.length === 0) {
+                message.channel.send("No results found!");
+                return;
+            }
+
+            const firstResult = result.data[0];
+            const kanji = firstResult.japanese[0].word;
+            const hiraganaReading = firstResult.japanese[0].reading;
+            const romanjiReading = Kuroshiro.Util.kanaToRomaji(hiraganaReading);
+
             (async function () {
-                var furigana;
-                const firstResult = result.data[0];
-
-                try {
-                    const kuroshiro = new Kuroshiro();
-                    await kuroshiro.init(new KuromojiAnalyzer());
-                    furigana = await kuroshiro.convert(firstResult.japanese[0].word, { mode: 'furigana', to: 'hiragana' });
-                }
-                catch (e) {
-                    console.error(e);
-                }
-
-                //const furigana = getFurigana(firstResult.japanese[0].word);
-                const romanjiReading = Kuroshiro.Util.kanaToRomaji(firstResult.japanese[0].reading);
-                const resultEmbed = new Discord.MessageEmbed()
-                    .setColor('#56d926')
-                    //.setTitle(firstResult.japanese[0].word)
-                    .setTitle(furigana)
-                    .setDescription(`${romanjiReading}`)
-
-                firstResult.senses.forEach((sense) => {
-                    if (sense.parts_of_speech[0] !== 'Wikipedia definition')
-                        resultEmbed.addField(sense.english_definitions.join(', '), sense.parts_of_speech.join(', '))
-                })
-
-                message.channel.send(resultEmbed);
+                const renderResult = await renderFurigana(kanji, kanjiFont, furiganaFont);
+                fs.writeFileSync('./output.png', renderResult);
+                await sleep(1000);
             })();
-            //const romanjiReading = Hepburn.fromKana(firstResult.japanese[0].reading).toLowerCase();
+
+            const resultEmbed = new Discord.MessageEmbed()
+                .setTitle(kanji)
+                .attachFiles(['./output.png'])
+                .setImage('attachment://output.png')
+                .setColor('#56d926')
+                .setDescription(romanjiReading);
+
+            firstResult.senses.forEach((sense) => {
+                if (sense.parts_of_speech[0] !== 'Wikipedia definition') {
+                    resultEmbed.addField(sense.english_definitions.join(', '), sense.parts_of_speech.join(', '))
+                }
+            })
+
+            message.channel.send(resultEmbed);
         });
     }
 }
