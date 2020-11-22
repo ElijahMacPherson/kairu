@@ -7,9 +7,13 @@
     "name": ""
   },
   "dependencies": {
+    "canvas": "^2.6.1",
     "discord.js": "^12.4.1",
     "dotenv": "^8.2.0",
     "hepburn": "^1.2.0",
+    "kuroshiro": "^1.1.2",
+    "kuroshiro-analyzer-kuromoji": "^1.1.0",
+    "render-furigana": "^2.0.4",
     "unofficial-jisho-api": "^2.0.12"
   }
 }

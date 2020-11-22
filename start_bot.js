@@ -10,7 +10,6 @@ Object.keys(botCommands).map(key => {
 });
 
 const TOKEN = process.env.DISCORD_TOKEN;
-
 bot.login(TOKEN);
 
 bot.on('ready', () => {

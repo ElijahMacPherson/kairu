@@ -1,7 +1,13 @@
+const Discord = require('discord.js');
+const Hepburn = require('hepburn');
+const renderFurigana = require('render-furigana');
+const fs = require('fs');
+const kanjiFont = '40px IPAMincho';
+const furiganaFont = '20px IPAMincho';
+//const Kuroshiro = require('kuroshiro');
+//const KuromojiAnalyzer = require('kuroshiro-analyzer-kuromoji');
 const JishoApi = require('unofficial-jisho-api');
 const jisho = new JishoApi();
-
-const hepburn = require("hepburn");
 
 module.exports = {
     name: 'jisho',
@@ -13,10 +19,35 @@ module.exports = {
         }
 
         jisho.searchForPhrase(args.join(' ')).then(result => {
-            const firstResult = result.data[0];
-            const romanjiReading = hepburn.fromKana(firstResult.japanese[0].reading).toLowerCase();
-            message.channel.send(`Kanji: ${firstResult.japanese[0].word}, Reading: ${firstResult.japanese[0].reading}, ${romanjiReading}
-Meaning: ${firstResult.senses[0].english_definitions.join(', ')}`);
+            (async function () {
+                var furigana;
+                const firstResult = result.data[0];
+
+                try {
+                    const kuroshiro = new Kuroshiro();
+                    await kuroshiro.init(new KuromojiAnalyzer());
+                    furigana = await kuroshiro.convert(firstResult.japanese[0].word, { mode: 'furigana', to: 'hiragana' });
+                }
+                catch (e) {
+                    console.error(e);
+                }
+
+                //const furigana = getFurigana(firstResult.japanese[0].word);
+                const romanjiReading = Kuroshiro.Util.kanaToRomaji(firstResult.japanese[0].reading);
+                const resultEmbed = new Discord.MessageEmbed()
+                    .setColor('#56d926')
+                    //.setTitle(firstResult.japanese[0].word)
+                    .setTitle(furigana)
+                    .setDescription(`${romanjiReading}`)
+
+                firstResult.senses.forEach((sense) => {
+                    if (sense.parts_of_speech[0] !== 'Wikipedia definition')
+                        resultEmbed.addField(sense.english_definitions.join(', '), sense.parts_of_speech.join(', '))
+                })
+
+                message.channel.send(resultEmbed);
+            })();
+            //const romanjiReading = Hepburn.fromKana(firstResult.japanese[0].reading).toLowerCase();
         });
     }
 }
