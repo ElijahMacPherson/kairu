@@ -1,17 +1,10 @@
 const Discord = require('discord.js');
-const fs = require('fs');
 const renderFurigana = require('render-furigana');
 const kanjiFont = '40px Yu Gothic UI';
 const furiganaFont = '20px Yu Gothic UI';
 const Kuroshiro = require('kuroshiro');
 const JishoApi = require('unofficial-jisho-api');
 const jisho = new JishoApi();
-
-function sleep(ms) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
-}   
 
 module.exports = {
     name: 'jisho',
@@ -23,8 +16,6 @@ module.exports = {
         }
 
         jisho.searchForPhrase(args.join(' ')).then(result => {
-            console.log(result);
-
             if (result.data.length === 0) {
                 message.channel.send("No results found!");
                 return;
@@ -37,24 +28,20 @@ module.exports = {
 
             (async function () {
                 const renderResult = await renderFurigana(kanji, kanjiFont, furiganaFont);
-                fs.writeFileSync('./output.png', renderResult);
-                await sleep(1000);
+
+                const resultEmbed = new Discord.MessageEmbed()
+                    .attachFiles([new Discord.MessageAttachment(renderResult, 'kanji.png')])
+                    .setColor('#56d926')
+                    .setDescription(romanjiReading);
+
+                firstResult.senses.forEach((sense) => {
+                    if (sense.parts_of_speech[0] !== 'Wikipedia definition') {
+                        resultEmbed.addField(sense.english_definitions.join(', '), sense.parts_of_speech.join(', '))
+                    }
+                })
+
+                message.channel.send(resultEmbed);
             })();
-
-            const resultEmbed = new Discord.MessageEmbed()
-                .setTitle(kanji)
-                .attachFiles(['./output.png'])
-                .setImage('attachment://output.png')
-                .setColor('#56d926')
-                .setDescription(romanjiReading);
-
-            firstResult.senses.forEach((sense) => {
-                if (sense.parts_of_speech[0] !== 'Wikipedia definition') {
-                    resultEmbed.addField(sense.english_definitions.join(', '), sense.parts_of_speech.join(', '))
-                }
-            })
-
-            message.channel.send(resultEmbed);
         });
     }
 }
