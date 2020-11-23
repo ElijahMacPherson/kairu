@@ -1,10 +1,20 @@
 const Discord = require('discord.js');
+
 const renderFurigana = require('render-furigana');
 const kanjiFont = '40px Yu Gothic UI';
 const furiganaFont = '20px Yu Gothic UI';
+
 const Kuroshiro = require('kuroshiro');
+
 const JishoApi = require('unofficial-jisho-api');
 const jisho = new JishoApi();
+
+const log4js = require("log4js");
+log4js.configure({
+    appenders: { jisho: { type: "file", filename: "kairu.log" } },
+    categories: { default: { appenders: ["jisho"], level: "info" } }
+});
+const logger = log4js.getLogger("jisho");
 
 module.exports = {
     name: 'jisho',
@@ -12,12 +22,18 @@ module.exports = {
     execute(message, args) {
         if (args.length === 0) {
             message.channel.send('Please supply a word to look up!');
+            logger.warn('No arguments supplied.');
             return;
         }
 
-        jisho.searchForPhrase(args.join(' ')).then(result => {
+        const phrase = args.join(' ');
+        console.log(`Search phrase: ${phrase}`);
+        logger.info(`Search phrase: ${phrase}`);
+
+        jisho.searchForPhrase(phrase).then(result => {
             if (result.data.length === 0) {
                 message.channel.send("No results found!");
+                logger.warn('No results found.');
                 return;
             }
 
